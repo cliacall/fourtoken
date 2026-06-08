@@ -199,7 +199,9 @@ contract FlapTaxToken is OpenFourToken {
 
         if (fundAmt > 0 && fundsWallet != address(0)) {
             feeToFundsWallet = 0;
-            payable(fundsWallet).send(fundAmt);
+            // Use call{value} for safe transfer (send can fail silently)
+            (bool ok,) = payable(fundsWallet).call{value: fundAmt}("");
+            if (!ok) feeToFundsWallet += fundAmt; // Refund on failure
         }
 
         if (stocksAmt > 0 && stocksVault != address(0)) {
@@ -228,10 +230,9 @@ contract FlapTaxToken is OpenFourToken {
     }
 
     function _dispatchBurn(uint256 amount) internal {
-        // Burn equivalent quote: swap token → quote → burn
-        // In bonding phase, burn from accumulated WBNB or native
-        // Simple: just send to DEAD for now
-        payable(address(0xdead)).send(amount);
+        // Burn: send BNB to DEAD. On failure, refund to feeToBurn accumulator.
+        (bool ok,) = payable(address(0xdead)).call{value: amount}("");
+        if (!ok) feeToBurn += amount;
     }
 
     // ═══════════════════════════════════════════
@@ -287,8 +288,9 @@ contract FlapTaxToken is OpenFourToken {
         uint256 amount = claimableRewards[msg.sender];
         if (amount > 0) {
             claimableRewards[msg.sender] = 0;
-            payable(msg.sender).send(amount);
-            emit DividendsClaimed(msg.sender, amount);
+            (bool ok,) = payable(msg.sender).call{value: amount}("");
+            if (!ok) claimableRewards[msg.sender] = amount; // Refund on failure
+            else emit DividendsClaimed(msg.sender, amount);
         }
     }
 
