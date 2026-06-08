@@ -8,12 +8,12 @@ import {IOpenFourToken} from "../../interfaces/IOpenFourToken.sol";
 import {IPancakeV2MigrationAdapter} from "../../interfaces/IPancakeV2MigrationAdapter.sol";
 import {OpenFourTypes, ParamDescriptor, ModuleEncodeSchema} from "../../libraries/OpenFourTypes.sol";
 
-/// @title FlapMigrateModule
-/// @notice Reference migration module for a fixed-duration / soft-cap Flap preset.
+/// @title TimedMigrate
+/// @notice Reference migration module for a fixed-duration / soft-cap StockTax preset.
 /// @dev Migrate modules decide when launch trading should end and optionally execute final
 ///      liquidity actions. Low-level DEX routing is intentionally delegated to an adapter in
 ///      this docs skeleton so the OpenFour-facing interface stays clear.
-contract FlapMigrateModule is Initializable, IOpenFourMigrateModule, IOpenFourModuleSchema {
+contract TimedMigrate is Initializable, IOpenFourMigrateModule, IOpenFourModuleSchema {
     /// @dev Module-local payload version: `encodedMigratedData = abi.encode(address pair)`.
     uint8 private constant PCS_V2_ENCODED_MIGRATED_DATA_V1 = 1;
 
@@ -52,7 +52,7 @@ contract FlapMigrateModule is Initializable, IOpenFourMigrateModule, IOpenFourMo
 
     /// @dev OpenFourCore is the only caller allowed to ask for or execute migration.
     modifier onlyFourCore() {
-        require(msg.sender == fourCore, "FlapMigrate: only fourCore");
+        require(msg.sender == fourCore, "TMG: only fourCore");
         _;
     }
 
@@ -71,10 +71,10 @@ contract FlapMigrateModule is Initializable, IOpenFourMigrateModule, IOpenFourMo
         override
         initializer
     {
-        require(fourCore_ != address(0), "FlapMigrate: zero fourCore");
+        require(fourCore_ != address(0), "TMG: zero fourCore");
         InputParams memory inp = abi.decode(rawParams, (InputParams));
         if (inp.migrationAdapter != address(0)) {
-            require(inp.tokenLiquidityAmount > 0, "FlapMigrate: zero tokenLiquidity");
+            require(inp.tokenLiquidityAmount > 0, "TMG: zero tokenLiquidity");
         }
 
         boundToken = token;
@@ -93,7 +93,7 @@ contract FlapMigrateModule is Initializable, IOpenFourMigrateModule, IOpenFourMo
 
     /// @notice Returns the stable registry tag and the version captured at initialization.
     function descriptor() external view override returns (bytes8 tagId, string memory tag, string memory version) {
-        tag = "module.migrate.flap";
+        tag = "module.migrate.timed";
         return (bytes8(keccak256(bytes(tag))), tag, _moduleVersion);
     }
 
@@ -107,8 +107,8 @@ contract FlapMigrateModule is Initializable, IOpenFourMigrateModule, IOpenFourMo
         onlyFourCore
         returns (OpenFourTypes.MigrateResult memory)
     {
-        require(fourCore != address(0), "FlapMigrate: not initialized");
-        require(ctx.token == boundToken, "FlapMigrate: wrong token");
+        require(fourCore != address(0), "TMG: not initialized");
+        require(ctx.token == boundToken, "TMG: wrong token");
         if (!_canMigrate(ctx.soldOut, ctx.totalRaised, ctx.timestamp)) {
             return OpenFourTypes.MigrateResult({canMigrate: false, data: "", reason: "Launch conditions not met"});
         }
@@ -126,8 +126,8 @@ contract FlapMigrateModule is Initializable, IOpenFourMigrateModule, IOpenFourMo
         onlyFourCore
         returns (uint8 migratedDataVersion, bytes memory encodedMigratedData)
     {
-        require(ctx.token == boundToken, "FlapMigrate: wrong token");
-        require(_canMigrate(ctx.soldOut, ctx.totalRaised, ctx.timestamp), "FlapMigrate: conditions not met");
+        require(ctx.token == boundToken, "TMG: wrong token");
+        require(_canMigrate(ctx.soldOut, ctx.totalRaised, ctx.timestamp), "TMG: conditions not met");
         if (params.migrationAdapter == address(0)) {
             return (0, "");
         }
@@ -141,7 +141,7 @@ contract FlapMigrateModule is Initializable, IOpenFourMigrateModule, IOpenFourMo
             params.tokenLiquidityAmount,
             params.lpRecipient
         );
-        require(pair != address(0), "FlapMigrate: pair missing");
+        require(pair != address(0), "TMG: pair missing");
         IOpenFourToken(ctx.token).setMigratedPool(pair, true);
         return (PCS_V2_ENCODED_MIGRATED_DATA_V1, abi.encode(pair));
     }

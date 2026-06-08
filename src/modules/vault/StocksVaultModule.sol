@@ -17,9 +17,9 @@ interface IPancakeRouter02 {
 }
 
 /// @title StocksVaultModule
-/// @notice Flap.sh Stocks (币股) vault — accumulates tax-allocated BNB fees and executes buyback
+/// @notice Stocks (币股) vault — accumulates tax-allocated BNB fees and executes buyback
 ///         via PancakeSwap V2 Router. Configurable for auto-buyback with min threshold + interval.
-/// @dev NOT an OpenFour Vault module — this is a standalone vault contract called by FlapTaxToken
+/// @dev NOT an OpenFour Vault module — this is a standalone vault contract called by StockTaxToken
 ///      during fee dispatch. It receives BNB, accumulates until threshold, then swaps for target token.
 contract StocksVaultModule is IStocksVault, ITagDescriptor, Initializable {
     using SafeERC20 for IERC20;
@@ -70,7 +70,7 @@ contract StocksVaultModule is IStocksVault, ITagDescriptor, Initializable {
         lastBuybackTime = block.timestamp;
     }
 
-    /// @notice Receive BNB deposits from FlapTaxToken's stocks allocation
+    /// @notice Receive BNB deposits from StockTaxToken's stocks allocation
     function depositStocksFee(uint256 amount) external payable override {
         require(msg.value >= amount, "SV: insufficient value");
         if (msg.value > amount) {

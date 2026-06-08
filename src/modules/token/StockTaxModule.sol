@@ -5,17 +5,17 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "../../interfaces/IOpenFourTokenModule.sol";
 import "../../interfaces/IOpenFourToken.sol";
 import "../../interfaces/IOpenFourModuleSchema.sol";
-import "../../interfaces/IFlapTaxToken.sol";
+import "../../interfaces/IStockTaxToken.sol";
 import "../../interfaces/ITagDescriptor.sol";
 import "../../libraries/OpenFourTypes.sol";
-import "../../tokens/FlapTaxToken.sol";
+import "../../tokens/StockTaxToken.sol";
 import "../../tokens/OpenFourToken.sol";
 
-/// @title FlapTaxTokenModule
-/// @notice Token module that creates and initializes FlapTaxToken instances.
+/// @title StockTaxModule
+/// @notice Token module that creates and initializes StockTaxToken instances.
 /// @dev Follows OpenFour module pattern: store init params, create token, initialize.
-contract FlapTaxTokenModule is IOpenFourTokenModule, IOpenFourModuleSchema {
-    bytes32 private constant _TAG_ID = bytes32(keccak256(bytes("module.token.flap_tax")));
+contract StockTaxModule is IOpenFourTokenModule, IOpenFourModuleSchema {
+    bytes32 private constant _TAG_ID = bytes32(keccak256(bytes("module.token.stock_tax")));
     bytes private _initParams;
     bytes4 private _moduleVersion;
 
@@ -23,7 +23,7 @@ contract FlapTaxTokenModule is IOpenFourTokenModule, IOpenFourModuleSchema {
         _moduleVersion = bytes4(keccak256(bytes("v1.0.0")));
     }
 
-    /// @notice Create a FlapTaxToken with the given creation params
+    /// @notice Create a StockTaxToken with the given creation params
     /// @dev Follows the IOpenFourTokenModule interface signature
     function createToken(
         address creator,
@@ -37,16 +37,16 @@ contract FlapTaxTokenModule is IOpenFourTokenModule, IOpenFourModuleSchema {
         string calldata tokenImplVersion,
         string calldata tokenModuleVersion
     ) external override returns (uint256 maxSupply, string memory name, string memory symbol) {
-        require(bytes(tokenParams.name).length > 0, "FTM: empty name");
-        require(bytes(tokenParams.symbol).length > 0, "FTM: empty symbol");
-        require(tokenParams.maxSupply > 0, "FTM: zero supply");
-        require(tokenParams.quoteAsset != address(0), "FTM: zero quote");
+        require(bytes(tokenParams.name).length > 0, "STM: empty name");
+        require(bytes(tokenParams.symbol).length > 0, "STM: empty symbol");
+        require(tokenParams.maxSupply > 0, "STM: zero supply");
+        require(tokenParams.quoteAsset != address(0), "STM: zero quote");
 
         // Store init params
         _initParams = tokenParams.tokenParams;
 
         // Create token
-        FlapTaxToken taxToken = new FlapTaxToken();
+        StockTaxToken taxToken = new StockTaxToken();
         token = address(taxToken);
 
         // Build InitArgs for OpenFourToken
@@ -68,11 +68,11 @@ contract FlapTaxTokenModule is IOpenFourTokenModule, IOpenFourModuleSchema {
             tokenImplVersion: tokenImplVersion
         });
 
-        // Decode FlapTaxConfig
-        FlapTaxConfig memory config = abi.decode(tokenParams.tokenParams, (FlapTaxConfig));
+        // Decode StockTaxConfig
+        StockTaxConfig memory config = abi.decode(tokenParams.tokenParams, (StockTaxConfig));
 
-        // Initialize FlapTaxToken (combines OpenFourToken + FlapTaxToken init)
-        FlapTaxToken(payable(token)).initialize(args, config);
+        // Initialize StockTaxToken (combines OpenFourToken + StockTaxToken init)
+        StockTaxToken(payable(token)).initialize(args, config);
 
         emit TokenCreated(token, tokenParams.name, tokenParams.symbol);
         return (tokenParams.maxSupply, tokenParams.name, tokenParams.symbol);
@@ -99,13 +99,13 @@ contract FlapTaxTokenModule is IOpenFourTokenModule, IOpenFourModuleSchema {
         params[9] = ParamDescriptor("fundsWallet", "address", 0, false, "Funds Wallet", "0x0000000000000000000000000000000000000000", "Address", "", "");
         params[10] = ParamDescriptor("stocksVault", "address", 0, false, "Stocks Vault", "0x0000000000000000000000000000000000000000", "Address", "", "");
 
-        return ModuleEncodeSchema("FlapTaxToken", 1, params);
+        return ModuleEncodeSchema("StockTaxToken", 1, params);
     }
 
     /// @notice Tag descriptor
     function descriptor() external pure override returns (bytes8 tagId, string memory tag, string memory version) {
         tagId = bytes8(_TAG_ID);
-        tag = "module.token.flap_tax";
+        tag = "module.token.stock_tax";
         version = "v1.0.0";
     }
 

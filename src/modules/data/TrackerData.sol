@@ -6,7 +6,7 @@ import "../../interfaces/IOpenFourCustomDataModule.sol";
 import "../../interfaces/IOpenFourModuleSchema.sol";
 import {ParamDescriptor, ModuleEncodeSchema} from "../../libraries/OpenFourTypes.sol";
 
-/// @notice Trader statistics tracked by FlapCustomDataModule
+/// @notice Trader statistics tracked by TrackerData
 struct TraderStats {
     uint256 totalPurchased;
     uint256 totalSold;
@@ -15,11 +15,11 @@ struct TraderStats {
     bool isV3LiquidityProvider;
 }
 
-/// @title FlapCustomDataModule
+/// @title TrackerData
 /// @notice Tracks per-trader stats, migration data, and allocation configuration.
 ///         Provides hooks for post-trade processing and migration snapshots.
-contract FlapCustomDataModule is IOpenFourCustomDataModule, IOpenFourModuleSchema, Initializable {
-    bytes32 private constant _TAG_ID = bytes32(keccak256(bytes("module.data.flap")));
+contract TrackerData is IOpenFourCustomDataModule, IOpenFourModuleSchema, Initializable {
+    bytes32 private constant _TAG_ID = bytes32(keccak256(bytes("module.data.tracker")));
 
     address private _core;
     address private _token;
@@ -57,7 +57,7 @@ contract FlapCustomDataModule is IOpenFourCustomDataModule, IOpenFourModuleSchem
     function afterHook(OpenFourTypes.TradeHookContext calldata ctx)
         external override
     {
-        require(msg.sender == _core, "FCD: not core");
+        require(msg.sender == _core, "TRK: not core");
 
         TraderStats storage s = _traders[ctx.trader];
 
@@ -83,7 +83,7 @@ contract FlapCustomDataModule is IOpenFourCustomDataModule, IOpenFourModuleSchem
     function onMigrate(OpenFourTypes.MigrateHookContext calldata ctx)
         external override
     {
-        require(msg.sender == _core, "FCD: not core");
+        require(msg.sender == _core, "TRK: not core");
         migrated = true;
         totalRaisedAtMigrate = ctx.totalRaised;
         totalSaleAtMigrate = 0; // Can be computed from trader stats
@@ -104,12 +104,12 @@ contract FlapCustomDataModule is IOpenFourCustomDataModule, IOpenFourModuleSchem
 
     // --- Schema ---
     function moduleEncodeSchema() external pure override returns (ModuleEncodeSchema memory) {
-        return ModuleEncodeSchema("FlapCustomData", 1, new ParamDescriptor[](0));
+        return ModuleEncodeSchema("TrackerData", 1, new ParamDescriptor[](0));
     }
 
     function descriptor() external view override returns (bytes8 tagId, string memory tag, string memory version) {
         tagId = bytes8(_TAG_ID);
-        tag = "module.data.flap";
+        tag = "module.data.tracker";
         version = _moduleVersion;
     }
 }

@@ -3,15 +3,15 @@ pragma solidity ^0.8.20;
 
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {IOpenFourCurveModule} from "../interfaces/IOpenFourCurveModule.sol";
-import {IOpenFourModuleSchema} from "../interfaces/IOpenFourModuleSchema.sol";
-import {OpenFourTypes, ParamDescriptor, ModuleEncodeSchema} from "../libraries/OpenFourTypes.sol";
+import {IOpenFourCurveModule} from "../../interfaces/IOpenFourCurveModule.sol";
+import {IOpenFourModuleSchema} from "../../interfaces/IOpenFourModuleSchema.sol";
+import {OpenFourTypes, ParamDescriptor, ModuleEncodeSchema} from "../../libraries/OpenFourTypes.sol";
 
-/// @title FlapCurveModule
-/// @notice Reference fixed-price curve module for the OpenFour Flap preset.
+/// @title FixedPriceCurve
+/// @notice Reference fixed-price curve module for the OpenFour StockTax preset.
 /// @dev Curve modules are stateless with respect to trades: OpenFourCore passes all live sale
 ///      accounting through `CurveContext`, and this module only returns price and execution bounds.
-contract FlapCurveModule is Initializable, IOpenFourCurveModule, IOpenFourModuleSchema {
+contract FixedPriceCurve is Initializable, IOpenFourCurveModule, IOpenFourModuleSchema {
     /// @dev OpenFour token amounts are expected to be 18-decimal token units in this skeleton.
     uint256 private constant TOKEN_UNIT = 1e18;
     /// @dev Keep the example penalty bounded so sell quotes cannot be accidentally configured to zero.
@@ -53,12 +53,12 @@ contract FlapCurveModule is Initializable, IOpenFourCurveModule, IOpenFourModule
         bytes calldata rawParams,
         string calldata moduleVersion_
     ) external override initializer {
-        require(fourCore_ != address(0), "FlapCurve: zero fourCore");
+        require(fourCore_ != address(0), "FPC: zero fourCore");
         Params memory p = abi.decode(rawParams, (Params));
-        require(p.fixedPrice > 0, "FlapCurve: invalid fixedPrice");
-        require(tokenParams.saleAmount > 0, "FlapCurve: invalid saleAmount");
-        require(p.sellPenaltyBps <= MAX_PENALTY_BPS, "FlapCurve: penalty too high");
-        require(p.minPurchase > 0 && p.maxPurchase >= p.minPurchase, "FlapCurve: invalid purchase range");
+        require(p.fixedPrice > 0, "FPC: invalid fixedPrice");
+        require(tokenParams.saleAmount > 0, "FPC: invalid saleAmount");
+        require(p.sellPenaltyBps <= MAX_PENALTY_BPS, "FPC: penalty too high");
+        require(p.minPurchase > 0 && p.maxPurchase >= p.minPurchase, "FPC: invalid purchase range");
 
         boundToken = token;
         fourCore = fourCore_;
@@ -69,7 +69,7 @@ contract FlapCurveModule is Initializable, IOpenFourCurveModule, IOpenFourModule
 
     /// @notice Returns the stable registry tag and the version captured at initialization.
     function descriptor() external view override returns (bytes8 tagId, string memory tag, string memory version) {
-        tag = "module.curve.flap";
+        tag = "module.curve.fixed_price";
         return (bytes8(keccak256(bytes(tag))), tag, _moduleVersion);
     }
 
@@ -82,8 +82,8 @@ contract FlapCurveModule is Initializable, IOpenFourCurveModule, IOpenFourModule
         override
         returns (OpenFourTypes.CurveResult memory)
     {
-        require(fourCore != address(0), "FlapCurve: not initialized");
-        require(ctx.token == boundToken, "FlapCurve: wrong token");
+        require(fourCore != address(0), "FPC: not initialized");
+        require(ctx.token == boundToken, "FPC: wrong token");
         if (ctx.amount == 0) {
             return OpenFourTypes.CurveResult(false, 0, 0, "amount is zero");
         }
@@ -118,8 +118,8 @@ contract FlapCurveModule is Initializable, IOpenFourCurveModule, IOpenFourModule
         uint256,
         uint256
     ) external view override returns (uint256 tokenAmount, uint256 curveQuote) {
-        require(fourCore != address(0), "FlapCurve: not initialized");
-        require(token == boundToken, "FlapCurve: wrong token");
+        require(fourCore != address(0), "FPC: not initialized");
+        require(token == boundToken, "FPC: wrong token");
         if (!isBuy || quoteBudget == 0 || remainingForSale == 0) {
             return (0, 0);
         }
@@ -200,15 +200,15 @@ contract FlapCurveModule is Initializable, IOpenFourCurveModule, IOpenFourModule
 
     /// @notice Returns the launch price for one token unit.
     function getInitialPrice() external view override returns (uint256) {
-        require(fourCore != address(0), "FlapCurve: not initialized");
+        require(fourCore != address(0), "FPC: not initialized");
         return params.fixedPrice;
     }
 
     /// @notice Returns the current display price.
     /// @dev A fixed-price curve has no price movement, so last price equals initial price.
     function getLastPrice(address token, uint256, uint256) external view override returns (uint256) {
-        require(fourCore != address(0), "FlapCurve: not initialized");
-        require(token == boundToken, "FlapCurve: wrong token");
+        require(fourCore != address(0), "FPC: not initialized");
+        require(token == boundToken, "FPC: wrong token");
         return params.fixedPrice;
     }
 
@@ -220,8 +220,8 @@ contract FlapCurveModule is Initializable, IOpenFourCurveModule, IOpenFourModule
         override
         returns (OpenFourTypes.CurveLiquiditySnapshot memory snapshot)
     {
-        require(fourCore != address(0), "FlapCurve: not initialized");
-        require(token == boundToken, "FlapCurve: wrong token");
+        require(fourCore != address(0), "FPC: not initialized");
+        require(token == boundToken, "FPC: wrong token");
         snapshot.available = true;
         snapshot.remainingForSale = remainingForSale;
         snapshot.totalRaised = totalRaised;

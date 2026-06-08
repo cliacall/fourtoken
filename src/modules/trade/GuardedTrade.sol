@@ -6,14 +6,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/IOpenFourTradeModule.sol";
 import "../../interfaces/IOpenFourModuleSchema.sol";
 import "../../interfaces/ITagDescriptor.sol";
-import "../../tokens/FlapTaxToken.sol";
+import "../../tokens/StockTaxToken.sol";
 import {OpenFourTypes, ParamDescriptor, ModuleEncodeSchema} from "../../libraries/OpenFourTypes.sol";
 
-/// @title FlapTradeModule
-/// @notice Trade module for FlapTaxToken preset.
+/// @title GuardedTrade
+/// @notice Trade module for StockTaxToken preset.
 ///         Enforces max buy/sell limits per address and anti-farmer protection.
-contract FlapTradeModule is IOpenFourTradeModule, IOpenFourModuleSchema, Initializable {
-    bytes32 private constant _TAG_ID = bytes32(keccak256(bytes("module.trade.flap")));
+contract GuardedTrade is IOpenFourTradeModule, IOpenFourModuleSchema, Initializable {
+    bytes32 private constant _TAG_ID = bytes32(keccak256(bytes("module.trade.guarded")));
 
     struct TradeConfig {
         uint256 maxBuyAmount;     // Max quote per buy (0 = unlimited)
@@ -42,12 +42,12 @@ contract FlapTradeModule is IOpenFourTradeModule, IOpenFourModuleSchema, Initial
     function init(address token, address fourCore, bytes calldata params, string calldata moduleVersion)
         external override initializer
     {
-        require(fourCore != address(0), "FTM: zero fourCore");
+        require(fourCore != address(0), "STM: zero fourCore");
         _core = fourCore;
         _token = token;
         TradeConfig memory cfg = abi.decode(params, (TradeConfig));
-        require(cfg.buyFeeBps <= 10_000, "FTM: buy fee bps");
-        require(cfg.sellFeeBps <= 10_000, "FTM: sell fee bps");
+        require(cfg.buyFeeBps <= 10_000, "STM: buy fee bps");
+        require(cfg.sellFeeBps <= 10_000, "STM: sell fee bps");
         _config = cfg;
         _initParams = params;
         _moduleVersion = moduleVersion;
@@ -60,7 +60,7 @@ contract FlapTradeModule is IOpenFourTradeModule, IOpenFourModuleSchema, Initial
         override
         returns (OpenFourTypes.TradeResult memory result)
     {
-        require(_token != address(0), "FTM: no token");
+        require(_token != address(0), "STM: no token");
 
         bool allowed = true;
         uint256 minAmt = 0;
@@ -84,7 +84,7 @@ contract FlapTradeModule is IOpenFourTradeModule, IOpenFourModuleSchema, Initial
         } else {
             // Anti-farmer: block sells from V3 liquidity providers
             if (v3LiquidityProviders[ctx.trader]) {
-                FlapTaxToken taxToken = FlapTaxToken(payable(_token));
+                StockTaxToken taxToken = StockTaxToken(payable(_token));
                 if (taxToken.isAntiFarmerActive()) {
                     allowed = false;
                     reason = "anti-farmer: V3 LP provider";
@@ -117,7 +117,7 @@ contract FlapTradeModule is IOpenFourTradeModule, IOpenFourModuleSchema, Initial
 
     /// @notice Mark address as V3 liquidity provider (called by core)
     function addV3LiquidityProvider(address provider) external {
-        require(msg.sender == _core, "FTM: not core");
+        require(msg.sender == _core, "STM: not core");
         v3LiquidityProviders[provider] = true;
         emit V3LiquidityBlocked(provider);
     }
@@ -130,12 +130,12 @@ contract FlapTradeModule is IOpenFourTradeModule, IOpenFourModuleSchema, Initial
         p[3] = ParamDescriptor("buyFeeBps", "uint16", 0, false, "Extra Buy Fee", "0", "bps", "0", "10000");
         p[4] = ParamDescriptor("sellFeeBps", "uint16", 0, false, "Extra Sell Fee", "0", "bps", "0", "10000");
         p[5] = ParamDescriptor("feeRecipient", "address", 0, false, "Fee Recipient", "0x0000000000000000000000000000000000000000", "Address", "", "");
-        return ModuleEncodeSchema("FlapTrade", 1, p);
+        return ModuleEncodeSchema("GuardedTrade", 1, p);
     }
 
     function descriptor() external view override returns (bytes8 tagId, string memory tag, string memory version) {
         tagId = bytes8(_TAG_ID);
-        tag = "module.trade.flap";
+        tag = "module.trade.guarded";
         version = _moduleVersion;
     }
 }

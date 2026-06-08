@@ -4,13 +4,13 @@ pragma solidity ^0.8.20;
 import "../interfaces/ITagDescriptor.sol";
 import "../libraries/OpenFourTypes.sol";
 
-/// @title FlapTaxTokenPreset
-/// @notice Preset orchestrator for Flap.sh-style Tax Token with Stocks (币股) functionality.
+/// @title StockTaxPreset
+/// @notice Preset orchestrator for on-chain Tax Token with Stocks (币股) functionality.
 ///         Defines the module composition, validator, and preset metadata.
-/// @dev This contract is registered with OpenFourCore to allow users to create FlapTaxTokens
+/// @dev This contract is registered with OpenFourCore to allow users to create StockTaxToken instances
 ///      through a single preset selection rather than selecting individual modules.
-contract FlapTaxTokenPreset is ITagDescriptor {
-    bytes32 private constant _TAG_ID = bytes32(keccak256(bytes("preset.flap_tax_token")));
+contract StockTaxPreset is ITagDescriptor {
+    bytes32 private constant _TAG_ID = bytes32(keccak256(bytes("preset.stock_tax")));
 
     // ─── Preset Configuration ───
     error InvalidPresetConfiguration(string reason);
@@ -33,11 +33,11 @@ contract FlapTaxTokenPreset is ITagDescriptor {
     event PresetModulesUpdated(uint256 indexed presetId);
 
     constructor(PresetConfig memory cfg, string memory version_) {
-        require(cfg.tokenModule != address(0), "FP: zero token module");
-        require(cfg.vaultModule != address(0), "FP: zero vault module");
-        require(cfg.curveModule != address(0), "FP: zero curve module");
-        require(cfg.tradeModule != address(0), "FP: zero trade module");
-        require(cfg.presetId != 0, "FP: zero presetId");
+        require(cfg.tokenModule != address(0), "SP: zero token module");
+        require(cfg.vaultModule != address(0), "SP: zero vault module");
+        require(cfg.curveModule != address(0), "SP: zero curve module");
+        require(cfg.tradeModule != address(0), "SP: zero trade module");
+        require(cfg.presetId != 0, "SP: zero presetId");
 
         _config = cfg;
         _version = version_;
@@ -53,12 +53,12 @@ contract FlapTaxTokenPreset is ITagDescriptor {
 
     /// @notice Returns the preset name tag
     function presetName() public pure returns (string memory) {
-        return "FlapTaxToken";
+        return "StockTaxToken";
     }
 
     /// @notice Returns human-readable description
     function presetDescription() public pure returns (string memory) {
-        return unicode"Flap.sh-style Tax Token with Stocks (币股), Burn, Dividend, and Liquidity allocation";
+        return unicode"on-chain Tax Token with Stocks (币股), Burn, Dividend, and Liquidity allocation";
     }
 
     /// @notice Returns the validator contract for this preset
@@ -76,13 +76,13 @@ contract FlapTaxTokenPreset is ITagDescriptor {
             active: true,
             createEnabled: true,
             validator: _config.validator,
-            tokenModuleId: bytes32(keccak256(bytes("module.token.flap_tax"))),
+            tokenModuleId: bytes32(keccak256(bytes("module.token.stock_tax"))),
             vaultModuleId: bytes32(keccak256(bytes("module.vault.standard"))),
-            curveModuleId: bytes32(keccak256(bytes("module.curve.flap"))),
-            tradeModuleId: bytes32(keccak256(bytes("module.trade.flap"))),
-            migrateModuleId: bytes32(keccak256(bytes("module.migrate.flap"))),
+            curveModuleId: bytes32(keccak256(bytes("module.curve.fixed_price"))),
+            tradeModuleId: bytes32(keccak256(bytes("module.trade.guarded"))),
+            migrateModuleId: bytes32(keccak256(bytes("module.migrate.timed"))),
             tokenImplId: bytes32(keccak256(bytes("token.flap_tax"))),
-            customDataId: bytes32(keccak256(bytes("module.data.flap"))),
+            customDataId: bytes32(keccak256(bytes("module.data.tracker"))),
             author: address(this)
         });
     }
@@ -90,7 +90,7 @@ contract FlapTaxTokenPreset is ITagDescriptor {
     // ─── ITagDescriptor ───
     function descriptor() external view override returns (bytes8 tagId, string memory tag, string memory version) {
         tagId = bytes8(_TAG_ID);
-        tag = "preset.flap_tax_token";
+        tag = "preset.stock_tax";
         version = _version;
     }
 }
