@@ -176,13 +176,12 @@ contract FlapTaxToken is OpenFourToken {
     /// @notice Send stocks-allocated fees to the StocksVault
     function _depositToStocks(uint256 amount) internal {
         address sv = stocksVault;
-        if (sv != address(0)) {
-            // Transfer native BNB (quote is native in this preset)
-            payable(sv).send(amount);
-            // If the vault is a contract, call deposit
-            if (sv.code.length > 0) {
-                IStocksVault(sv).depositStocksFee{value: address(this).balance}(amount);
-            }
+        if (sv == address(0)) return;
+        // Forward to StocksVault via its deposit interface
+        if (sv.code.length > 0) {
+            IStocksVault(sv).depositStocksFee{value: amount}(amount);
+        } else {
+            payable(sv).transfer(amount);
         }
     }
 
@@ -205,9 +204,10 @@ contract FlapTaxToken is OpenFourToken {
 
         if (stocksAmt > 0 && stocksVault != address(0)) {
             feeToStocks = 0;
-            payable(stocksVault).send(stocksAmt);
             if (stocksVault.code.length > 0) {
                 IStocksVault(stocksVault).depositStocksFee{value: stocksAmt}(stocksAmt);
+            } else {
+                payable(stocksVault).transfer(stocksAmt);
             }
         }
 
@@ -298,9 +298,10 @@ contract FlapTaxToken is OpenFourToken {
         if (amount > 0) {
             feeToStocks = 0;
             if (stocksVault != address(0)) {
-                payable(stocksVault).send(amount);
                 if (stocksVault.code.length > 0) {
                     IStocksVault(stocksVault).depositStocksFee{value: amount}(amount);
+                } else {
+                    payable(stocksVault).transfer(amount);
                 }
             }
         }
@@ -311,10 +312,8 @@ contract FlapTaxToken is OpenFourToken {
     // ═══════════════════════════════════════════
 
     function _update(address from, address to, uint256 value) internal override {
-        // Track shares for dividend staking
-        if (from != address(0) && to != address(0)) {
-            _updateShares(from, to, value);
-        }
+        // Track shares for dividend staking (mint, transfer, burn)
+        _updateShares(from, to, value);
         super._update(from, to, value);
     }
 
